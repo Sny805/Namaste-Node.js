@@ -1,29 +1,85 @@
 const express = require("express");
-
+const connectDB = require("./config/database");
 const app = express();
+const User = require("./models/user");
 
-// this will only handle GET call to /user
-app.get('/user', (req, res) => {
-    res.send({ firstName: "sunny", lastName: "kumar" })
-});
+app.use(express.json())
 
-app.post('/user', (req, res) => {
-    res.send("data successfully saved to database")
-});
-
-app.delete('/user', (req, res) => {
-    res.send("data successfully deleted from database")
-
-});
-
-//this will match all the HTTP method API calls to /test 
-app.use("/test", (req, res) => {
-    res.send("Hello from server")
+app.post("/signup", async (req, res) => {
+    const user = User(req.body);
+    try {
+        await user.save();
+        res.send("User Added successfully");
+    }
+    catch (err) {
+        res.status(400).send("Error saving the user", err);
+    }
 })
 
+app.get("/user", async (req, res) => {
+    try {
+        const userEmail = req.body.emailId
+        const user = await User.findOne({ emailId: userEmail })
+        if (!user) {
+            res.status(404).send("User not found")
+        }
+        else {
+            res.send(user)
+        }
 
+    }
+    catch (err) {
+        res.status(404).send("something went wrong")
+    }
 
-
-app.listen(3000, () => {
-    console.log("Server is successfully listening on port 3000...");
 })
+
+app.get("/feed", async (req, res) => {
+    try {
+        const users = await User.find({})
+        if (users.length == 0) {
+            res.status(404).send("Users not found")
+        }
+        else {
+            res.send(users)
+        }
+    }
+    catch (err) {
+        res.status(404).send("something went wrong")
+    }
+})
+
+app.delete("/user", async (req, res) => {
+    const userId = req.body.userId;
+    try {
+        const user = await User.findByIdAndDelete(userId)
+        res.send("User deleted successfully");
+    }
+    catch (err) {
+        res.status(404).send("something went wrong")
+    }
+})
+
+app.patch("/user", async (req, res) => {
+    const userId = req.body.userId
+    const data = req.body
+
+    try {
+        await User.findByIdAndUpdate(userId, data, { runValidators: true })
+        res.send("user updated successfully");
+    }
+    catch (err) {
+        res.status(404).send("something went wrong", err.message)
+    }
+
+})
+
+connectDB().then(() => {
+    console.log("Database connection established...");
+    app.listen(7777, () => {
+        console.log("Server is successfully listening on port 3000...");
+    })
+}).catch((err) => {
+    console.error("Database cannot be connected");
+})
+
