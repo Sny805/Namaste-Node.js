@@ -21,12 +21,10 @@ const userAuth = async (req, res, next) => {
         next()
     }
     catch (err) {
-
+        console.log("getting user profile")
         res.status(400).json({ error: err.message })
 
     }
-
-
 
 }
 
