@@ -30,13 +30,13 @@ requestRouter.post("/request/send/:status/:toUserId", userAuth, async (req, res)
             ]
         })
         if (existingConnectionRequest) {
-            res.status(400).json({ message: "Connection Request Already Exists!!" })
+            return res.status(400).json({ message: "Connection Request Already Exists!!" })
         }
 
         // If user exists or not 
         const toUser = await User.findById(toUserId);
         if (!toUser) {
-            res.status(400).json({ message: "User doest not exists" })
+            return res.status(400).json({ message: "User doest not exists" })
         }
 
 
@@ -54,6 +54,41 @@ requestRouter.post("/request/send/:status/:toUserId", userAuth, async (req, res)
     catch (err) {
         res.status(400).json({ error: err.message })
     }
+})
+
+
+
+requestRouter.post("/request/review/:status/:requestId", userAuth, async (req, res) => {
+    try {
+        const loggedInUser = req.user;
+        const { status, requestId } = req.params
+
+        // Validate the status
+        const allowedStatus = ["accepted", "rejected"];
+        if (!allowedStatus.includes(status)) {
+            return res.status(400).json({ message: "Status not allowed!!" })
+        }
+        // Is Elon loggedIn user
+        const connectionRequest = await ConnectionRequest.findOne({
+            _id: requestId,
+            toUserId: loggedInUser._id,
+            status: "interested"
+        })
+
+        if (!connectionRequest) {
+            return res.status(404).json({ message: "Connection request not found" })
+        }
+        // status = interested
+        connectionRequest.status = status
+        const data = await connectionRequest.save();
+        res.json({ message: "Connection request " + status, data });
+        // request id should be valid
+
+    }
+    catch (err) {
+        res.status(400).json({ error: err.message })
+    }
+
 })
 
 
