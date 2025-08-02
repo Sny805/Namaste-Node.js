@@ -4,16 +4,25 @@ const requestRouter = express.Router();
 const ConnectionRequest = require("../models/connectionRequest");
 const User = require("../models/user");
 
+// Constants
+const ALLOWED_SEND_STATUSES = ["ignored", "interested"];
+const ALLOWED_REVIEW_STATUSES = ["accepted", "rejected"];
+
 requestRouter.post("/request/send/:status/:toUserId", userAuth, async (req, res) => {
     try {
         const fromUserId = req.user._id;
-        const toUserId = req.params.toUserId;
-        const status = req.params.status;
+        const { toUserId, status } = req.params;
 
-        const allowedStatus = ["ignored", "interested"]
-        if (!allowedStatus.includes(status)) {
+        //  Don't allow sending request to self
+        if (fromUserId.toString() === toUserId) {
+            return res.status(400).json({ message: "You cannot send a request to yourself." });
+        }
+
+        if (!ALLOWED_SEND_STATUSES.includes(status)) {
             return res.status(400).json({ message: "Invalid status type " + status })
         }
+
+
 
         // user cant send request to itself
 
@@ -45,14 +54,14 @@ requestRouter.post("/request/send/:status/:toUserId", userAuth, async (req, res)
 
         const data = await connectionRequest.save();
 
-        res.json({
-            message: req.user.firstName + " is " + status + " in " + toUser.firstName,
+        res.status(201).json({
+            message: `${req.user.firstName} marked ${status} for ${toUser.firstName}.`,
             data
         })
     }
 
     catch (err) {
-        res.status(400).json({ error: err.message })
+        res.status(500).json({ error: err.message })
     }
 })
 
@@ -60,18 +69,18 @@ requestRouter.post("/request/send/:status/:toUserId", userAuth, async (req, res)
 
 requestRouter.post("/request/review/:status/:requestId", userAuth, async (req, res) => {
     try {
-        const loggedInUser = req.user;
+        const toUserId = req.user._id;
         const { status, requestId } = req.params
 
         // Validate the status
-        const allowedStatus = ["accepted", "rejected"];
-        if (!allowedStatus.includes(status)) {
+
+        if (!ALLOWED_REVIEW_STATUSES.includes(status)) {
             return res.status(400).json({ message: "Status not allowed!!" })
         }
         // Is Elon loggedIn user
         const connectionRequest = await ConnectionRequest.findOne({
             _id: requestId,
-            toUserId: loggedInUser._id,
+            toUserId,
             status: "interested"
         })
 
@@ -81,12 +90,12 @@ requestRouter.post("/request/review/:status/:requestId", userAuth, async (req, r
         // status = interested
         connectionRequest.status = status
         const data = await connectionRequest.save();
-        res.json({ message: "Connection request " + status, data });
+        res.json({ message: `Connection request has been ${status}.`, data });
         // request id should be valid
 
     }
     catch (err) {
-        res.status(400).json({ error: err.message })
+        res.status(500).json({ error: err.message })
     }
 
 })

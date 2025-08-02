@@ -5,16 +5,16 @@ const User = require("../models/user")
 
 const userRouter = express.Router();
 
-const USER_SAEF_DATA = "firstName lastName photoUrl age gender about skills"
+const USER_SAFE_DATA = "firstName lastName photoUrl age gender about skills"
 
 userRouter.get("/user/requests/received", userAuth, async (req, res) => {
     try {
-        const loggedInUser = req.user
+        const userId = req.user._id
 
         const connectionRequests = await ConnectionRequest.find({
-            toUserId: loggedInUser._id,
+            toUserId: userId,
             status: "interested"
-        }).populate("fromUserId", USER_SAEF_DATA)
+        }).populate("fromUserId", USER_SAFE_DATA).lean()
 
         res.json({
             message: "Data fetched successfully",
@@ -32,30 +32,28 @@ userRouter.get("/user/requests/received", userAuth, async (req, res) => {
 
 userRouter.get("/user/connections", userAuth, async (req, res) => {
     try {
-        const loggedInUser = req.user
+        const userId = req.user._id
         const connectionRequests = await ConnectionRequest.find({
+            status: "accepted",
             $or: [
                 {
-                    toUserId: loggedInUser._id, status: "accepted"
+                    toUserId: userId,
                 },
                 {
-                    fromUserId: loggedInUser._id, status: "accepted"
+                    fromUserId: userId
                 }
             ]
-        }).populate("fromUserId", USER_SAEF_DATA).populate("toUserId", USER_SAEF_DATA)
+        }).populate("fromUserId", USER_SAFE_DATA).populate("toUserId", USER_SAFE_DATA).lean()
 
-        const data = connectionRequests.map((row) => {
-            if (row.fromUserId._id.toString() == loggedInUser._id.toString()) {
-                return row.toUserId
-            }
-            return row.fromUserId
-        }
+
+        const data = connectionRequests.map((row) =>
+            row.fromUserId._id.toString() === userId.toString() ? row.toUserId : row.fromUserId
         );
 
         res.json({ data: data });
-
-
     }
+
+
     catch (err) {
         res.status(400).json({ error: err.message })
     }
@@ -69,28 +67,27 @@ userRouter.get("/feed", userAuth, async (req, res) => {
         // 2. ignored people
         // 3. already sent the connection request
 
-        const loggedInUser = req.user
+        const userId = req.user._id
         const page = parseInt(req.query.page) || 1
-        let limit = parseInt(req.query.limit) || 10
-        limit = limit > 50 ? 50 : limit
+        let limit = Math.min(parseInt(req.query.limit) || 10, 50)
         const skip = (page - 1) * limit
         //Find all the connection requests (sent+received)
 
         const connectionRequests = await ConnectionRequest.find({
-            $or: [{ toUserId: loggedInUser._id }, { fromUserId: loggedInUser._id }]
-        }).select("fromUserId toUserId")
+            $or: [{ toUserId: userId }, { fromUserId: userId }]
+        }).select("fromUserId toUserId").lean()
 
-        const hideUsersFromFeed = new Set();
+        const hideUsersFromFeed = new Set([userId.toString()]);
 
         connectionRequests.forEach((req) => {
             hideUsersFromFeed.add(req.toUserId.toString())
             hideUsersFromFeed.add(req.fromUserId.toString())
         })
 
-        console.log(hideUsersFromFeed);
+
         const users = await User.find({
-            $and: [{ _id: { $nin: Array.from(hideUsersFromFeed) } }, { _id: { $ne: loggedInUser._id } }]
-        }).select(USER_SAEF_DATA).skip(skip).limit(limit)
+            _id: { $nin: Array.from(hideUsersFromFeed) }
+        }).select(USER_SAFE_DATA).skip(skip).limit(limit).lean()
 
         res.send(users)
     }
