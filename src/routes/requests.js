@@ -16,7 +16,7 @@ requestRouter.post("/request/send/:status/:toUserId", userAuth, async (req, res)
         const fromUserId = req.user._id;
         const { toUserId, status } = req.params;
 
-        console.log("-------", fromUserId, toUserId, status)
+
         //  Don't allow sending request to self
         if (fromUserId.toString() === toUserId) {
             return res.status(400).json({ message: "You cannot send a request to yourself." });
@@ -57,8 +57,8 @@ requestRouter.post("/request/send/:status/:toUserId", userAuth, async (req, res)
         const connectionRequest = new ConnectionRequest({ fromUserId, toUserId, status })
 
         const data = await connectionRequest.save();
-        const emailRes = await sendEmail.run()
-        console.log("response is", emailRes)
+        // const emailRes = await sendEmail.run()
+
 
         res.status(201).json({
             message: `${req.user.firstName} marked ${status} for ${toUser.firstName}.`,

@@ -41,10 +41,12 @@ const createSendEmailCommand = (toAddress, fromAddress) => {
 
 
 
-const run = async () => {
+const run = async (subject, body) => {
     const sendEmailCommand = createSendEmailCommand(
         "sunnymahato@nexgsolutions.com",
         "sunnymahto9824@gmail.com",
+        subject,
+        body
     );
 
     try {
