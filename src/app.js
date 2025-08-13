@@ -5,6 +5,7 @@ const cookieParser = require("cookie-parser");
 const cors = require("cors")
 require('dotenv').config()
 require("./utills/cronjob");
+const http = require("http")
 
 app.use(express.json())
 app.use(cookieParser());
@@ -18,17 +19,22 @@ const profileRouter = require("./routes/profile");
 const requestRouter = require("./routes/requests");
 const userRouter = require("./routes/user");
 const paymentRouter = require("./routes/payment");
+const initializeSocket = require("./utills/socket");
+const chatRouter = require("./routes/chat");
 
 app.use("/", appRouter)
 app.use("/", profileRouter)
 app.use("/", requestRouter)
 app.use("/", userRouter)
 app.use("/", paymentRouter)
+app.use("/", chatRouter)
 
+const server = http.createServer(app)
+initializeSocket(server)
 
 connectDB().then(() => {
     console.log("Database connection established...");
-    app.listen(process.env.PORT, () => {
+    server.listen(process.env.PORT, () => {
         console.log("Server is successfully listening on port 7777...");
     })
 }).catch((err) => {
