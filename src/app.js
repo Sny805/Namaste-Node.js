@@ -29,6 +29,9 @@ app.use("/", userRouter)
 app.use("/", paymentRouter)
 app.use("/", chatRouter)
 
+
+
+
 const server = http.createServer(app)
 initializeSocket(server)
 
